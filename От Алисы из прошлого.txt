@@ -1,0 +1,6 @@
+Мне нужно было сохранить прогресс поэтому я вышла через Ctrl + C распиши как снова все запустить
+source .venv/bin/activate
+docker compose up
+curl http://localhost:5000/hello
+Проверьте, что запись успешно занеслась в таблицу (Раздел IV, пункт 10) [INDEX]:
+docker compose exec db psql -U app -d visits_db -c "SELECT * FROM visits;"
