@@ -1,16 +1,28 @@
-# Стадия 1: Сборка зависимостей
+# ─── Раздел II: многостадийная сборка на базе python:3.11-slim ───
+
+# Стадия 1: установка зависимостей
 FROM python:3.11-slim AS builder
+
 WORKDIR /app
+
+# Сначала копируем только requirements.txt — для кэширования слоёв
 COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
 
-# Стадия 2: Финальный образ
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+
+# Стадия 2: финальный образ
 FROM python:3.11-slim AS runner
-WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends libpq5 && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /root/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH
+WORKDIR /app
+
+# Забираем установленные зависимости из стадии сборки
+COPY --from=builder /install /usr/local
+
+# Копируем код приложения
 COPY . .
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+EXPOSE 5000
+
+# ─── Раздел II, п. 3: точка входа через gunicorn ───
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "app:app"]
