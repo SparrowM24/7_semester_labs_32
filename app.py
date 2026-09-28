@@ -12,8 +12,8 @@ DB_HOST = os.environ.get("POSTGRES_HOST", "db")
 DB_PORT = os.environ.get("POSTGRES_PORT", "5432")
 DB_NAME = os.environ.get("POSTGRES_DB")
 
-# Формируем строку строго по методичке с отключением SSL-проверок внутри Docker
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=disable"
+# Формируем строку подключения
+DATABASE_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=disable"
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -26,8 +26,11 @@ class Visit(db.Model):
     visit_time = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     client_ip = db.Column(db.String(45), nullable=False)
 
-# Раздел I. Пункт 5: Настройка создания таблицы при старте приложения
-with app.app_context():
+# Раздел I. Пункт 5: Настройка создания таблицы при старте приложения (безопасный хук)
+@app.before_request
+def create_tables():
+    # Удаляем хук после первого выполнения, чтобы не дергать базу при каждом запросе
+    app.before_request_funcs[None].remove(create_tables)
     db.create_all()
 
 # Раздел I. Пункт 6: Маршрут GET /hello
