@@ -1,11 +1,9 @@
-.env
-.git
-.gitignore
+.venv/
 __pycache__/
 *.pyc
 *.pyo
-.venv/
-venv/
-.pytest_cache/
-.mypy_cache/
-README.md
+.env
+.git/
+.gitignore
+Dockerfile
+docker-compose.yml
