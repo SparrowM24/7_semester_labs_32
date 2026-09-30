@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:16
+    container_name: pg-lab
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: visits_db
+    network_mode: host
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d visits_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    container_name: visits-app
+    env_file:
+      - .env
+    network_mode: host
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pg_data:
+    driver: local
