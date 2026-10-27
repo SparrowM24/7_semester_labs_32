@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import time
 from typing import Iterable
 
 from domain.shared.value_objects import TimeInterval
@@ -15,8 +15,8 @@ def restore_meeting_room(
     room_id: str,
     name: str,
     capacity_value: int,
-    opens_at: datetime,
-    closes_at: datetime,
+    opens_at: time,
+    closes_at: time,
     bookings: Iterable[dict],
 ) -> MeetingRoom:
     room = MeetingRoom(

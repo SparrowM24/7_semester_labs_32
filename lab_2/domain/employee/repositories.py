@@ -1,0 +1,9 @@
+from typing import Optional, Protocol
+
+from .aggregates import Employee
+
+
+class EmployeeRepository(Protocol):
+    def add(self, employee: Employee) -> None: ...
+    def get(self, employee_id: str) -> Optional[Employee]: ...
+    def save(self, employee: Employee) -> None: ...

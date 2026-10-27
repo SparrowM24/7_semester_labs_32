@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, time
 
 from domain.shared.errors import InvalidValueObject
 
@@ -32,14 +32,17 @@ class ParticipantsCount:
 
 @dataclass(frozen=True)
 class OfficeHours:
-    """Часы работы офиса."""
+    """Часы работы офиса: время суток, одинаковое для каждого дня."""
 
-    opens_at: datetime
-    closes_at: datetime
+    opens_at: time
+    closes_at: time
 
     def __post_init__(self) -> None:
         if self.opens_at >= self.closes_at:
             raise InvalidValueObject("Время открытия должно быть раньше времени закрытия")
 
     def contains(self, start: datetime, end: datetime) -> bool:
-        return self.opens_at <= start and end <= self.closes_at
+        # Бронь должна уложиться в один день и в часы работы.
+        return (start.date() == end.date()
+                and self.opens_at <= start.time()
+                and end.time() <= self.closes_at)

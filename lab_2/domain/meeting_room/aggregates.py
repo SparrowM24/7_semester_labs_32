@@ -40,6 +40,13 @@ class MeetingRoom:
     @property
     def bookings(self) -> tuple[Booking, ...]:
         return tuple(self._bookings)
+    
+    def is_free(self, interval: TimeInterval) -> bool:
+            """Предикат шлюза «Комната свободна?»."""
+            return all(
+                b.is_cancelled or not b.interval.overlaps(interval)
+                for b in self._bookings
+            )
 
     def book(self, interval: TimeInterval, participants: ParticipantsCount) -> Booking:
         # Инвариант 1: число участников не превышает вместимость.
@@ -54,13 +61,10 @@ class MeetingRoom:
             raise DomainInvariantViolation("Бронь выходит за пределы часов работы офиса")
 
         # Инвариант 3: брони одной комнаты не пересекаются.
-        for existing in self._bookings:
-            if existing.is_cancelled:
-                continue
-            if existing.interval.overlaps(interval):
-                raise DomainInvariantViolation(
-                    "Бронь пересекается с существующей бронью этой комнаты"
-                )
+        if not self.is_free(interval):
+            raise DomainInvariantViolation(
+                "Бронь пересекается с существующей бронью этой комнаты"
+            )
 
         booking = Booking(
             id=str(uuid4()),

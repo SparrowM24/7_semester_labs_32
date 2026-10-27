@@ -1,6 +1,6 @@
 """Демонстрация доменной модели. Запуск: python main.py"""
 
-from datetime import datetime
+from datetime import datetime, time
 
 from domain.meeting_room.aggregates import MeetingRoom
 from domain.meeting_room.factories import restore_meeting_room
@@ -14,14 +14,57 @@ from domain.shared.errors import DomainInvariantViolation, InvalidValueObject
 from domain.shared.value_objects import Money
 from infrastructure.meeting_room_repository import InMemoryMeetingRoomRepository
 from infrastructure.parking_repository import InMemoryParkingSpaceRepository
+from application.booking_process import BookingProcess
+from domain.employee.aggregates import Employee
+from infrastructure.booking_repositories import (
+    InMemoryBookingLifecycleRepository, InMemoryEmployeeRepository)
+from infrastructure.clock import FixedClock
+
+
+def demo_booking_process() -> None:
+    print("=== Процесс бронирования ===")
+    clock = FixedClock(datetime(2026, 1, 1, 8, 0))
+    rooms = InMemoryMeetingRoomRepository()
+    employees = InMemoryEmployeeRepository()
+    bookings = InMemoryBookingLifecycleRepository()
+
+    room = MeetingRoom.new("Альфа", Capacity(10), OfficeHours(
+        datetime(2026, 1, 1, 9, 0), datetime(2026, 1, 1, 18, 0)))
+    rooms.add(room)
+    emp = Employee.new("Иванов")
+    emp.register_no_show(datetime(2026, 1, 1, 0, 0))
+    emp.register_no_show(datetime(2026, 1, 1, 0, 0))   # уже две неявки в месяце
+    employees.add(emp)
+
+    process = BookingProcess(
+        rooms, bookings, employees,
+        BookingService(rooms, employees, clock), clock)
+
+    # 5 часов > 4 часов: нужно согласование; заказан кейтеринг
+    bid = process.start(room.id, emp.id,
+                        datetime(2026, 1, 1, 10, 0), datetime(2026, 1, 1, 15, 0),
+                        participants=5, needs_service_order=True)
+    b = bookings.get(bid)
+    print(b.state.name)                      # На согласовании
+
+    process.approve_booking(bid, approved=True)
+    print(b.state.name)                      # Оформляется (ждём заказ)
+    process.confirm_service_order(bid)
+    print(b.state.name)                      # Подтверждена
+
+    clock.set(datetime(2026, 1, 1, 10, 0))
+    process.tick(bid)                        # время начала встречи
+    print(b.state.name)                      # Ожидает отметки
+
+    clock.set(datetime(2026, 1, 1, 10, 15))
+    process.tick(bid)                        # неявка, третья за месяц
+    print(b.state.name, "| финальное:", b.is_finished)
+    print([type(e).__name__ for e in b.events])
 
 
 def demo_meeting_room() -> None:
     print("=== Переговорная комната ===")
-    office = OfficeHours(
-        opens_at=datetime(2026, 1, 1, 9, 0),
-        closes_at=datetime(2026, 1, 1, 18, 0),
-    )
+    office = OfficeHours(opens_at=time(9, 0), closes_at=time(18, 0))
     room = MeetingRoom.new("Альфа", Capacity(10), office)
 
     rooms = InMemoryMeetingRoomRepository()
@@ -88,19 +131,9 @@ def demo_parking() -> None:
 def demo_factories() -> None:
     print("=== Восстановление из состояния ===")
     room = restore_meeting_room(
-        room_id="room-1",
-        name="Бета",
-        capacity_value=8,
-        opens_at=datetime(2026, 1, 1, 9, 0),
-        closes_at=datetime(2026, 1, 1, 18, 0),
-        bookings=[
-            {
-                "start": datetime(2026, 1, 1, 10, 0),
-                "end": datetime(2026, 1, 1, 11, 0),
-                "participants": 4,
-                "is_cancelled": False,
-            },
-        ],
+        room_id="room-1", name="Бета", capacity_value=8,
+        opens_at=time(9, 0), closes_at=time(18, 0),
+        bookings=[...],
     )
     print("Комната восстановлена, броней:", len(room.bookings))
 
