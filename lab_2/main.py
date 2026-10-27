@@ -29,7 +29,7 @@ def demo_booking_process() -> None:
     bookings = InMemoryBookingLifecycleRepository()
 
     room = MeetingRoom.new("Альфа", Capacity(10), OfficeHours(
-        datetime(2026, 1, 1, 9, 0), datetime(2026, 1, 1, 18, 0)))
+        time(9, 0), time(18, 0)))
     rooms.add(room)
     emp = Employee.new("Иванов")
     emp.register_no_show(datetime(2026, 1, 1, 0, 0))
@@ -133,7 +133,14 @@ def demo_factories() -> None:
     room = restore_meeting_room(
         room_id="room-1", name="Бета", capacity_value=8,
         opens_at=time(9, 0), closes_at=time(18, 0),
-        bookings=[...],
+        bookings=[
+            {
+                "start": datetime(2026, 1, 1, 10, 0),
+                "end": datetime(2026, 1, 1, 11, 0),
+                "participants": 4,
+                "is_cancelled": False
+            }
+        ],
     )
     print("Комната восстановлена, броней:", len(room.bookings))
 
@@ -156,3 +163,4 @@ if __name__ == "__main__":
     demo_meeting_room()
     demo_parking()
     demo_factories()
+    demo_booking_process()

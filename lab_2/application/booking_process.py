@@ -190,8 +190,6 @@ class BookingProcess:
         if employee is None:
             raise EntityNotFound(f"Сотрудник {booking.employee_id} не найден")
 
-        # Предикат вычисляется до побочных действий; событие агрегата проверяет,
-        # что 15 минут действительно прошли, и откатывать ничего не придётся.
         branch = exclusive_gateway("Неявок за месяц три или больше?", [
             (lambda: employee.would_reach_limit(now), "ban"),
             (lambda: not employee.would_reach_limit(now), "no_ban"),
@@ -205,30 +203,30 @@ class BookingProcess:
             self.ban_large_rooms(booking, employee)
         self.bookings.save(booking)
 
-        def tick(self, booking_id: str) -> bool:
-            """Запускает все наступившие таймеры сущности. Время берётся только из Clock."""
-            fired = False
-            while self._fire_due(booking_id):
-                fired = True
-            return fired
+    def tick(self, booking_id: str) -> bool:
+        """Запускает все наступившие таймеры сущности. Время берётся только из Clock."""
+        fired = False
+        while self._fire_due(booking_id):
+            fired = True
+        return fired
 
-        def tick_all(self) -> list[str]:
-            """Проверяет все бронирования, возвращает идентификаторы тех, у кого сработал таймер."""
-            return [b.id for b in self.bookings.all() if self.tick(b.id)]
+    def tick_all(self) -> list[str]:
+        """Проверяет все бронирования, возвращает идентификаторы тех, у кого сработал таймер."""
+        return [b.id for b in self.bookings.all() if self.tick(b.id)]
 
-        def _fire_due(self, booking_id: str) -> bool:
-            now = self.clock.now()
-            booking = self._get(booking_id)
-            state = booking.state
-            if isinstance(state, PendingApproval) and now >= booking.approval_deadline:
-                self.on_approval_timeout(booking_id, now)
-            elif isinstance(state, Confirmed) and now >= booking.interval.start:
-                self.on_booking_start(booking_id, now)
-            elif isinstance(state, AwaitingCheckIn) and now >= self.wait_for_check_in(booking):
-                self.on_checkin_timeout(booking_id, now)
-            else:
-                return False
-            return True
+    def _fire_due(self, booking_id: str) -> bool:
+        now = self.clock.now()
+        booking = self._get(booking_id)
+        state = booking.state
+        if isinstance(state, PendingApproval) and now >= booking.approval_deadline:
+            self.on_approval_timeout(booking_id, now)
+        elif isinstance(state, Confirmed) and now >= booking.interval.start:
+            self.on_booking_start(booking_id, now)
+        elif isinstance(state, AwaitingCheckIn) and now >= self.wait_for_check_in(booking):
+            self.on_checkin_timeout(booking_id, now)
+        else:
+            return False
+        return True
             
     # ===================== внутренние шаги =====================
     def _prepare_booking(self, booking: BookingLifecycle) -> None:
