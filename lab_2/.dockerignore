@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.git
+.venv
+.idea
+.vscode
+tests/
+main.py
+app.py
+*.md
+Dockerfile
+docker-compose.yml

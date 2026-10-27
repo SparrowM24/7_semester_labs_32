@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    container_name: booking-app
+    env_file:
+      - .env
+    network_mode: host
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os,urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/health' % os.getenv('PORT','5000'), timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+    
