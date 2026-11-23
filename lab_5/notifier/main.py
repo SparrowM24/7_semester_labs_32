@@ -17,6 +17,7 @@ UNSUBSCRIBED = {c.strip() for c in os.getenv("UNSUBSCRIBED", "").split(",") if c
 
 # Всё хранится в памяти
 notifications = []
+processed = set()  # номера уже обработанных операций — защита от повторных событий
 received = 0
 sent = 0
 
@@ -32,6 +33,11 @@ def make_text(event):
 
 async def handle(event):
     global received, sent
+    # Повторное событие (at-least-once) — пропускаем, чтобы не отправить уведомление дважды
+    if event["operation_id"] in processed:
+        logging.info("Повтор события %s, пропускаю", event["operation_id"])
+        return
+    processed.add(event["operation_id"])
     received += 1
     if event["customer_id"] in UNSUBSCRIBED:
         return  # отписан — не отправляем

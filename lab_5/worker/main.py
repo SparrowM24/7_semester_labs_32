@@ -89,6 +89,10 @@ async def handle(data):
 
 
 async def main():
+    # Метка готовности для healthcheck: при старте удаляем старую
+    if os.path.exists("/tmp/ready"):
+        os.remove("/tmp/ready")
+
     # 1. Таблицы создаются автоматически
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -108,6 +112,9 @@ async def main():
     for name in ("notifier.events", "analytics.events"):
         q = await channel.declare_queue(name, durable=True, arguments={"x-queue-type": "quorum"})
         await q.bind(events)
+
+    # Таблицы созданы, брокер подключён, очереди объявлены — worker готов
+    open("/tmp/ready", "w").close()
 
     logging.info("worker запущен, жду операции")
     async with queue.iterator() as messages:

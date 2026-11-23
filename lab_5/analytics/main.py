@@ -12,11 +12,17 @@ RABBITMQ_URL = os.environ["RABBITMQ_URL"]
 
 # Статистика в памяти: store_id -> словарь со счётчиками
 stores = {}
+processed = set()  # номера уже обработанных операций — защита от повторных событий
 received = 0
 
 
 def handle(event):
     global received
+    # Повторное событие (at-least-once) — пропускаем, чтобы не посчитать операцию дважды
+    if event["operation_id"] in processed:
+        logging.info("Повтор события %s, пропускаю", event["operation_id"])
+        return
+    processed.add(event["operation_id"])
     received += 1
     store_id = event["store_id"]
     if store_id not in stores:
